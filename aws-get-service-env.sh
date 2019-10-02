@@ -8,7 +8,14 @@ function getEnv
     do
         echo "Get environments from service: $1"
         taskDefinition=$(aws ecs describe-services --cluster production --services $1 | jq -c '.services[].deployments[].taskDefinition' | sed 's/"//g')
-        aws ecs describe-task-definition --task-definition $taskDefinition | jq '.taskDefinition.containerDefinitions[].environment'
+        env=$(aws ecs describe-task-definition --task-definition $taskDefinition | jq '.taskDefinition.containerDefinitions[].environment')
+        echo "$env" | jq -c '.[]'|
+            while IFS= read -r line
+            do
+                name=$(jq '.name' <<< $line | sed 's/"//g')
+                value=$(jq '.value' <<< $line | sed 's/"//g')
+                echo "$1,$name,$value"
+            done >> result.csv
         shift
     done
 }
